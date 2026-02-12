@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Personal Ledger</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+
+
+<div class="modal" id="totalModal">
+  <div class="box">
+    <h3 style="text-align:center">Overall Summary</h3>
+    <div id="totalContent"></div>
+    <button class="secondary" onclick="closeModal('totalModal')">Close</button>
+  </div>
+</div>
+
+
+<style>
+:root{
+  --primary:#2563eb;
+  --credit:#16a34a;
+  --debit:#dc2626;
+  --bg:#f4f6f8;
+}
+body{margin:0;font-family:Arial;background:var(--bg);}
+.app{max-width:420px;margin:auto;background:#fff;min-height:100vh}
+
+/* HEADER */
+.header{
+  background:var(--primary);
+  color:#fff;
+  padding:15px;
+  text-align:center;
+  font-weight:bold;
+}
+
+/* ACTIONS */
+.actions{
+  display:flex;
+  gap:10px;
+  padding:6px;
+}
+.actions button,input{
+  flex:1;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+.actions button{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+}
+
+/* LIST */
+.list{padding:10px;}
+.person{
+  background:#fafafa;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:8px;
+  display:flex;
+  justify-content:space-between;
+  cursor:pointer;
+}
+.net.plus{color:var(--credit);}
+.net.minus{color:var(--debit);}
+
+/* TRANSACTION ROW */
+.txn{
+  display:flex;
+  gap:8px;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:8px;
+  background:#f9fafb;
+  cursor:pointer;
+}
+.txn-left{flex:2}
+.txn-middle{
+  flex:1;
+  text-align:center;
+  font-weight:bold;
+  font-size:13px;
+}
+.txn-right{
+  flex:1;
+  text-align:right;
+  font-weight:bold;
+}
+.credit-text{color:var(--credit);}
+.debit-text{color:var(--debit);}
+.small{font-size:12px;opacity:.7}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.box{
+  background:#fff;
+  padding:20px;
+  width:90%;
+  border-radius:12px;
+}
+.box input,select,button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+}
+.box button{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+}
+.secondary{
+  background:#e5e7eb!important;
+  color:#000!important;
+}
+
+.icon-btn{
+  flex:0 0 auto;
+  padding:10px 14px;
+  font-size:18px;
+  border-radius:8px;
+  background:#e5e7eb;
+  border:1px solid #ccc;
+  cursor:pointer;
+}
+
+.icon-btn:hover{
+  background:#d1d5db;
+}
+
+#totalContent{
+  margin-top:15px;
+  font-size:15px;
+}
+
+.total-row{
+  display:flex;
+  justify-content:space-between;
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:10px;
+  background:#f9fafb;
+  font-weight:bold;
+}
+.credit{color:var(--credit);}
+.debit{color:var(--debit);}
+.net{color:var(--primary);}
+
+
+
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<div class="header" id="title">People Ledger</div>
+
+<div class="actions" id="actions">
+  <button onclick="openPersonModal()">Add Person</button>
+  <input placeholder="Search" oninput="searchPerson(this.value)">
+  <button id="totalBtn" class="icon-btn" title="Total Summary">Σ</button>
+  <button id="installBtn" class="icon-btn" title="Install App">⬇️</button>
+
+</div>
+
+<div class="list" id="list"></div>
+</div>
+
+<!-- ADD PERSON -->
+<div class="modal" id="personModal">
+  <div class="box">
+    <h3>Add Person</h3>
+    <input id="personName" placeholder="Person name">
+    <button onclick="addPerson()">Save</button>
+    <button class="secondary" onclick="closeModal('personModal')">Back</button>
+  </div>
+</div>
+
+<!-- ADD TRANSACTION -->
+<div class="modal" id="txnModal">
+  <div class="box">
+    <h3>Add Transaction</h3>
+    <select id="txnType">
+      <option value="credit"> Credit</option>
+      <option value="debit">Debit</option>
+    </select>
+    <input id="txnAmount" type="number" placeholder="Amount">
+    <input id="txnNote" placeholder="Note">
+    <button onclick="saveTransaction()">Save</button>
+    <button class="secondary" onclick="closeModal('txnModal')">Back</button>
+  </div>
+</div>
+
+<script>
+/* CONFIG */
+const MASTER_PIN="1234";
+
+/* DATA */
+let data=JSON.parse(localStorage.getItem("ledger_data"))||{};
+let currentPerson=null;
+let pressTimer;
+
+/* UTILS */
+function save(){localStorage.setItem("ledger_data",JSON.stringify(data));}
+function closeModal(id){document.getElementById(id).style.display="none";}
+function askPin(){return prompt("Enter PIN")===MASTER_PIN;}
+
+/* PEOPLE LIST */
+function renderPeople(list=data){
+ const box=document.getElementById("list");
+ box.innerHTML="";
+ Object.keys(list).forEach(name=>{
+  let net=0;
+  list[name].forEach(t=>net+=t.type==="credit"?t.amount:-t.amount);
+  box.innerHTML+=`
+   <div class="person"
+    onclick="openPerson('${name}')"
+    onmousedown="startPersonPress('${name}')"
+    onmouseup="clearPress()"
+    ontouchstart="startPersonPress('${name}')"
+    ontouchend="clearPress()">
+    <div>${name}</div>
+    <div class="net ${net>=0?'plus':'minus'}">₹${net}</div>
+   </div>`;
+ });
+}
+
+/* LONG PRESS PERSON */
+function startPersonPress(name){
+ pressTimer=setTimeout(()=>personOptions(name),700);
+}
+function clearPress(){clearTimeout(pressTimer);}
+
+function personOptions(name){
+ if(!askPin()) return alert("Wrong PIN");
+ const act=prompt("Type: edit or delete");
+ if(act==="delete"){
+  if(confirm("Delete person and all transactions?")){
+   delete data[name];
+   save();renderPeople();
+  }
+ }
+ if(act==="edit"){
+  const n=prompt("New name",name);
+  if(n && !data[n]){
+   data[n]=data[name];
+   delete data[name];
+   save();renderPeople();
+  }
+ }
+}
+
+/* OPEN PERSON */
+function openPerson(name){
+ currentPerson=name;
+ title.innerText=name;
+ actions.innerHTML=`
+  <button onclick="openTxnModal()">Add Transaction</button>
+  <button onclick="printPerson()">Print</button>
+  <button onclick="goBack()">Back</button>`;
+ const box=document.getElementById("list");
+ box.innerHTML="";
+ data[name].forEach((t,i)=>{
+  box.innerHTML+=`
+   <div class="txn"
+    onmousedown="startTxnPress(${i})"
+    onmouseup="clearPress()"
+    ontouchstart="startTxnPress(${i})"
+    ontouchend="clearPress()">
+    <div class="txn-left">
+      <div>${t.note||""}</div>
+      <div class="small">${t.date}</div>
+    </div>
+    <div class="txn-middle ${t.type==='credit'?'credit-text':'debit-text'}">
+      ${t.type==='credit'?'Credit':'Debit'}
+    </div>
+    <div class="txn-right ${t.type==='credit'?'credit-text':'debit-text'}">
+      ₹${t.amount}
+    </div>
+   </div>`;
+ });
+}
+
+/* LONG PRESS TRANSACTION */
+function startTxnPress(i){
+ pressTimer=setTimeout(()=>txnOptions(i),700);
+}
+function txnOptions(i){
+ if(!askPin()) return alert("Wrong PIN");
+ const act=prompt("Type: edit or delete");
+ if(act==="delete"){
+  data[currentPerson].splice(i,1);
+ }
+ if(act==="edit"){
+  const a=prompt("Amount",data[currentPerson][i].amount);
+  const n=prompt("Note",data[currentPerson][i].note);
+  if(a!==null)data[currentPerson][i].amount=Number(a);
+  if(n!==null)data[currentPerson][i].note=n;
+ }
+ save();openPerson(currentPerson);
+}
+
+/* NAV */
+function goBack(){
+ title.innerText="People Ledger";
+ actions.innerHTML=`
+  <button onclick="openPersonModal()">Add Person</button>
+  <input placeholder="Search" oninput="searchPerson(this.value)">`;
+ renderPeople();
+}
+
+/* PERSON CRUD */
+function openPersonModal(){personModal.style.display="flex";}
+function addPerson(){
+ const n=personName.value.trim();
+ if(!n)return;
+ if(!data[n])data[n]=[];
+ save();renderPeople();
+ closeModal('personModal');
+ personName.value="";
+}
+
+/* TRANSACTION CRUD */
+function openTxnModal(){txnModal.style.display="flex";}
+function saveTransaction(){
+ if(!txnAmount.value)return alert("Amount?");
+ data[currentPerson].push({
+  type:txnType.value,
+  amount:Number(txnAmount.value),
+  note:txnNote.value,
+  date:new Date().toLocaleString()
+ });
+ save();closeModal('txnModal');
+ txnAmount.value="";txnNote.value="";
+ openPerson(currentPerson);
+}
+
+/* SEARCH */
+function searchPerson(v){
+ const f={};
+ Object.keys(data).forEach(n=>{
+  if(n.toLowerCase().includes(v.toLowerCase()))f[n]=data[n];
+ });
+ renderPeople(f);
+}
+
+/* PRINT */
+function printPerson(){
+ let net=0,rows="";
+ data[currentPerson].forEach(t=>{
+  net+=t.type==="credit"?t.amount:-t.amount;
+  rows+=`
+   <tr style="color:${t.type==="credit"?"green":"red"}">
+    <td>${t.note||""}</td>
+    <td>${t.date}</td>
+    <td>${t.type}</td>
+    <td>${t.amount}</td>
+   </tr>`;
+ });
+ const w=window.open("");
+ w.document.write(`
+ <h2 style="color:#2563eb">${currentPerson} Ledger</h2>
+ <table border="1" width="100%" cellpadding="6">
+  <tr style="background:#e5e7eb">
+   <th>Note</th><th>Date</th><th>Type</th><th>Amount</th>
+  </tr>${rows}
+ </table>
+ <h3 style="color:${net>=0?'green':'red'}">Net Balance: ₹${net}</h3>`);
+ w.print();
+}
+
+/* START */ 
+renderPeople();
+</script>
+
+<script>
+/* =========================
+   INSTALL ICON LOGIC
+========================= */
+let deferredPrompt;
+const installBtn = document.getElementById("installBtn");
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = "block";
+});
+
+installBtn.onclick = async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBtn.style.display = "none";
+};
+
+/* =========================
+   TOTAL SUMMARY LOGIC
+========================= */
+document.getElementById("totalBtn").onclick = () => {
+  let totalCredit = 0;
+  let totalDebit = 0;
+
+  Object.values(data).forEach(personTxns => {
+    personTxns.forEach(t => {
+      if (t.type === "credit") totalCredit += t.amount;
+      else totalDebit += t.amount;
+    });
+  });
+
+  const net = totalCredit - totalDebit;
+
+  document.getElementById("totalContent").innerHTML = `
+    <div class="total-row credit">
+      <span>Total Credit</span><span>₹${totalCredit}</span>
+    </div>
+    <div class="total-row debit">
+      <span>Total Debit</span><span>₹${totalDebit}</span>
+    </div>
+    <div class="total-row net">
+      <span>Net Amount</span><span>₹${net}</span>
+    </div>
+  `;
+
+  document.getElementById("totalModal").style.display = "flex";
+};
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+
+<script type="module" src="firebase-sync.js"></script>
+
+</body>
+</html>
