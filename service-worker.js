@@ -1,12 +1,15 @@
+const CACHE_NAME = "student-progress-v2";
+
 self.addEventListener("install", e => {
   e.waitUntil(
-    caches.open("student-app").then(cache =>
+    caches.open(CACHE_NAME).then(cache =>
       cache.addAll([
-        "index.html",
-        "style.css",
-        "app.js",
-        "manifest.json",
-        "icon.png"
+        "./",
+        "./index.html",
+        "./style.css",
+        "./app.js",
+        "./manifest.json",
+        "./icon.png"
       ])
     )
   );
