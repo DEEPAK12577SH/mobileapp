@@ -1,42 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Student Progress Manager</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Student Progress Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
 
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2d89ef">
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4CAF50">
 
-<!-- App CSS -->
-<link rel="stylesheet" href="style.css">
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-
 <body>
 
-<header>📘 Student Progress Manager</header>
+<h2>📘 Student Progress Manager</h2>
 
-    <button id="installBtn" class="install-btn hidden">
-  ⬇️ Install App
-</button>
+<div class="top-bar">
+    <input type="text" id="search" placeholder="Search student...">
+    <button onclick="openModal()">➕ Add</button>
+</div>
 
+<div id="studentList"></div>
 
-<section class="controls">
-  <input id="studentName" placeholder="Student Name">
-  <input id="studentClass" placeholder="Class">
-  <button onclick="addStudent()">Add Student</button>
-</section>
+<!-- Modal -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Add Student</h3>
+        <input id="name" placeholder="Student Name">
+        <input id="subject" placeholder="Subject">
+        <input id="marks" type="number" placeholder="Marks (out of 100)">
+        <input id="attendance" type="number" placeholder="Attendance %">
+        <textarea id="remarks" placeholder="Remarks"></textarea>
 
-<section id="students"></section>
-<section id="profile" class="hidden"></section>
+        <div class="modal-actions">
+            <button onclick="saveStudent()">Save</button>
+            <button class="danger" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
 
-<script src="app.js"></script>
+<script src="script.js"></script>
+
+    <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
 </body>
 </html>
