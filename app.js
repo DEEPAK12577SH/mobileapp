@@ -3,11 +3,18 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
 
+/* ---------- DOM ---------- */
+const studentName = document.getElementById("studentName");
+const studentClass = document.getElementById("studentClass");
+const studentsDiv = document.getElementById("students");
+const profile = document.getElementById("profile");
+const installBtn = document.getElementById("installBtn");
+
 /* ---------- DATA ---------- */
-let students = JSON.parse(localStorage.getItem("students")) || [];
+let studentData = JSON.parse(localStorage.getItem("students")) || [];
 
 function save() {
-  localStorage.setItem("students", JSON.stringify(students));
+  localStorage.setItem("students", JSON.stringify(studentData));
 }
 
 /* ---------- STUDENTS ---------- */
@@ -17,7 +24,7 @@ function addStudent() {
     return;
   }
 
-  students.push({
+  studentData.push({
     id: Date.now(),
     name: studentName.value,
     class: studentClass.value,
@@ -32,9 +39,15 @@ function addStudent() {
 }
 
 function render() {
-  students.innerHTML = "";
-  students.forEach(s => {
-    students.innerHTML += `
+  studentsDiv.innerHTML = "";
+
+  if (studentData.length === 0) {
+    studentsDiv.innerHTML = "<p>No students added yet</p>";
+    return;
+  }
+
+  studentData.forEach(s => {
+    studentsDiv.innerHTML += `
       <div class="student-card">
         <b>${s.name}</b><br>
         Class: ${s.class}<br><br>
@@ -46,8 +59,10 @@ function render() {
 
 /* ---------- PROFILE ---------- */
 function openProfile(id) {
-  const s = students.find(x => x.id === id);
-  students.style.display = "none";
+  const s = studentData.find(x => x.id === id);
+  if (!s) return;
+
+  studentsDiv.style.display = "none";
   profile.classList.remove("hidden");
 
   profile.innerHTML = `
@@ -83,31 +98,51 @@ function openProfile(id) {
 
 function back() {
   profile.classList.add("hidden");
-  students.style.display = "block";
+  studentsDiv.style.display = "block";
 }
 
 /* ---------- ATTENDANCE ---------- */
 function addAttendance(id) {
-  const s = students.find(x => x.id === id);
-  s.attendance.push({ date: attDate.value, status: attStatus.value });
+  const s = studentData.find(x => x.id === id);
+  if (!s) return;
+
+  const date = document.getElementById("attDate").value;
+  const status = document.getElementById("attStatus").value;
+
+  if (!date) return;
+
+  s.attendance.push({ date, status });
   save();
   openProfile(id);
 }
 
 /* ---------- TESTS ---------- */
 function addTest(id) {
-  const s = students.find(x => x.id === id);
-  const m = +maths.value, sc = +science.value, e = +english.value;
-  const percent = Math.round((m + sc + e) / 3);
-  const grade = percent >= 80 ? "A" : percent >= 60 ? "B" : percent >= 40 ? "C" : "D";
+  const s = studentData.find(x => x.id === id);
+  if (!s) return;
 
-  s.tests.push({ name: testName.value, maths: m, science: sc, english: e, percent, grade });
+  const testName = document.getElementById("testName").value;
+  const m = +document.getElementById("maths").value;
+  const sc = +document.getElementById("science").value;
+  const e = +document.getElementById("english").value;
+
+  if (!testName) return;
+
+  const percent = Math.round((m + sc + e) / 3);
+  const grade =
+    percent >= 80 ? "A" :
+    percent >= 60 ? "B" :
+    percent >= 40 ? "C" : "D";
+
+  s.tests.push({ name: testName, maths: m, science: sc, english: e, percent, grade });
   save();
   openProfile(id);
 }
 
 /* ---------- CHART ---------- */
 function drawChart(s) {
+  if (!s.tests.length) return;
+
   new Chart(document.getElementById("chart"), {
     type: "line",
     data: {
@@ -123,7 +158,9 @@ function drawChart(s) {
 
 /* ---------- PDF ---------- */
 function downloadPDF(id) {
-  const s = students.find(x => x.id === id);
+  const s = studentData.find(x => x.id === id);
+  if (!s) return;
+
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF();
 
@@ -140,33 +177,27 @@ function downloadPDF(id) {
   pdf.save(`${s.name}_Report.pdf`);
 }
 
-render();
+/* ---------- PWA INSTALL ---------- */
 let deferredPrompt;
-const installBtn = document.getElementById("installBtn");
 
-// Listen for install availability
-window.addEventListener("beforeinstallprompt", (e) => {
+window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredPrompt = e;
   installBtn.classList.remove("hidden");
 });
 
-// Install button click
 installBtn.addEventListener("click", async () => {
   if (!deferredPrompt) return;
 
   deferredPrompt.prompt();
-  const choice = await deferredPrompt.userChoice;
-
-  if (choice.outcome === "accepted") {
-    console.log("App installed");
-  }
-
+  await deferredPrompt.userChoice;
   deferredPrompt = null;
   installBtn.classList.add("hidden");
 });
 
-// Hide button after install
 window.addEventListener("appinstalled", () => {
   installBtn.classList.add("hidden");
 });
+
+/* ---------- INIT ---------- */
+render();
