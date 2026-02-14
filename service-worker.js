@@ -1,34 +1,19 @@
-const CACHE_NAME = "ledger-cache-v1";
-
-const FILES_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./manifest.json"
-];
-
-// Install
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
-  );
-  self.skipWaiting();
+self.addEventListener("install", function(event) {
+    event.waitUntil(
+        caches.open("todo-app").then(function(cache) {
+            return cache.addAll([
+                "index.html",
+                "style.css",
+                "script.js"
+            ]);
+        })
+    );
 });
 
-// Activate
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-// Fetch
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(
-      response => response || fetch(event.request)
-    )
-  );
+self.addEventListener("fetch", function(event) {
+    event.respondWith(
+        caches.match(event.request).then(function(response) {
+            return response || fetch(event.request);
+        })
+    );
 });
