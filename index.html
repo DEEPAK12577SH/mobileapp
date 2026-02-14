@@ -1,53 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Premium To-Do App</title>
-    <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<title>Student Progress Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2d89ef">
+
+<!-- App CSS -->
+<link rel="stylesheet" href="style.css">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
+
 <body>
 
-    <div class="container">
+<header>📘 Student Progress Manager</header>
 
-        <h1>My To-Do List</h1>
-
-        <!-- Progress Section -->
-        <div class="progress-container">
-            <div class="circle">
-                <span id="progressText">0%</span>
-            </div>
-            <p id="motivation">Let's start! 🚀</p>
-        </div>
-
-        <!-- Input Section -->
-        <div class="input-area">
-            <input type="text" id="taskInput" placeholder="Enter a task">
-            <button onclick="addTask()">Add</button>
-        </div>
-
-        <button class="dark-btn" onclick="toggleDarkMode()">Toggle Dark Mode</button>
-
-        <ul id="taskList"></ul>
-
-    </div>
-
-    <!-- Confetti Library -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-    <!-- Sound Effect -->
-    <audio id="completeSound">
-        <source src="https://www.soundjay.com/buttons/sounds/button-3.mp3" type="audio/mpeg">
-    </audio>
-
-    <script src="script.js"></script>
-
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
-}
-</script>
+    <button id="installBtn" class="install-btn hidden">
+  ⬇️ Install App
+</button>
 
 
+<section class="controls">
+  <input id="studentName" placeholder="Student Name">
+  <input id="studentClass" placeholder="Class">
+  <button onclick="addStudent()">Add Student</button>
+</section>
+
+<section id="students"></section>
+<section id="profile" class="hidden"></section>
+
+<script src="app.js"></script>
 </body>
 </html>
