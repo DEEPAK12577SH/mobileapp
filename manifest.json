@@ -1,14 +1,14 @@
 {
-  "name": "My Todo App",
-  "short_name": "Todo",
+  "name": "Student Progress Manager",
+  "short_name": "Progress",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4caf50",
+  "theme_color": "#2d89ef",
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
